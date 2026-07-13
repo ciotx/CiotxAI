@@ -19,17 +19,17 @@ router = APIRouter(tags=["billing"])
 PLANS = {
     "starter": {
         "name": "Starter",
-        "price_monthly": 39900,    # in paise (₹399)
-        "price_annual": 399900,     # in paise (₹3,999)
-        "scans_per_month": 20,
+        "price_monthly": settings.STARTER_PRICE_MONTHLY,
+        "price_annual": settings.STARTER_PRICE_ANNUAL,
+        "scans_per_month": settings.STARTER_SCAN_LIMIT,
         "max_loc": 50000,
         "features": ["ai_review", "github_connect", "secrets_detection", "dependency_check", "basic_report"],
     },
     "pro": {
         "name": "Pro",
-        "price_monthly": 149900,    # in paise (₹1,499)
-        "price_annual": 1499900,    # in paise (₹14,999)
-        "scans_per_month": -1,      # unlimited
+        "price_monthly": settings.PRO_PRICE_MONTHLY,
+        "price_annual": settings.PRO_PRICE_ANNUAL,
+        "scans_per_month": -1,
         "max_loc": 200000,
         "features": ["ai_review", "cross_file_analysis", "github_pr_scanning", "scheduled_monitoring",
                      "detailed_report", "team_dashboard", "priority_support", "secrets_detection", "dependency_check"],
@@ -114,6 +114,7 @@ async def create_subscription(
             sub.plan = plan
             sub.billing_period = period
             sub.status = "active"
+            sub.scans_used = 0  # Reset counter on re-subscription
             sub.current_period_end = period_end
         else:
             sub = Subscription(
@@ -247,6 +248,7 @@ async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         sub.billing_period = period
         sub.status = "active"
         sub.razorpay_payment_id = payment_id
+        sub.scans_used = 0
         sub.current_period_start = now
         sub.current_period_end = period_end
     else:

@@ -52,23 +52,24 @@ async def trigger_scan(
         sub = sub_result.scalar_one_or_none()
 
         if sub:
-            scans_limit = 20 if sub.plan == "starter" else -1
+            scans_limit = settings.STARTER_SCAN_LIMIT if sub.plan == "starter" else -1
             if scans_limit > 0 and sub.scans_used >= scans_limit:
                 raise HTTPException(
                     status_code=402,
                     detail=f"Scan limit reached ({sub.scans_used}/{scans_limit}). Upgrade to Pro for unlimited scans.",
                 )
         elif user.plan_status == "trial":
-            # Count scans during trial
+            # Count scans during trial (exclude failed scans)
             count_result = await db.execute(
                 select(sa_func.count(Scan.id)).where(
                     Scan.project_id.in_(
                         select(Project.id).where(Project.created_by == user.id)
-                    )
+                    ),
+                    Scan.status != "failed",
                 )
             )
             trial_scans = count_result.scalar() or 0
-            if trial_scans >= 10:
+            if trial_scans >= settings.TRIAL_SCAN_LIMIT:
                 raise HTTPException(
                     status_code=402,
                     detail="Trial scan limit reached (10 scans). Subscribe to continue.",
@@ -119,7 +120,7 @@ async def submit_local_scan(request: Request, db: AsyncSession = Depends(get_db)
         scan_count = 0
 
         if sub:
-            scans_limit = 20 if sub.plan == "starter" else -1
+            scans_limit = settings.STARTER_SCAN_LIMIT if sub.plan == "starter" else -1
             if scans_limit > 0 and sub.scans_used >= scans_limit:
                 raise HTTPException(status_code=402, detail=f"Scan limit reached ({sub.scans_used}/{scans_limit}). Upgrade to Pro.")
             sub.scans_used += 1

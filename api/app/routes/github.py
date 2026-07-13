@@ -50,7 +50,8 @@ async def github_connect():
         )
 
     state = secrets.token_urlsafe(32)
-    GH_OAUTH_STATES[state] = datetime.now(timezone.utc).isoformat()
+    from app.services.state import gh_oauth_states
+    await gh_oauth_states.set(state, "pending")
     redirect_uri = f"{settings.API_BASE_URL}/v1/github/callback"
 
     url = (
@@ -72,10 +73,11 @@ async def github_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle GitHub OAuth callback for repo access. Stores encrypted token."""
-    # Validate OAuth state to prevent CSRF
-    if state not in GH_OAUTH_STATES:
+    # Validate OAuth state to prevent CSRF (Redis-backed, multi-worker safe)
+    from app.services.state import gh_oauth_states
+    if not await gh_oauth_states.exists(state):
         raise HTTPException(status_code=400, detail="Invalid OAuth state.")
-    del GH_OAUTH_STATES[state]
+    await gh_oauth_states.pop(state)
 
     user = await get_current_user(request, db)
 

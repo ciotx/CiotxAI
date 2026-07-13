@@ -3,12 +3,20 @@ CIOTX API — ARQ Worker
 Background job processor for scan pipeline.
 """
 
-import asyncio
-
 from arq import create_pool
 from arq.connections import RedisSettings
 
 from app.config import settings
+
+# Singleton Redis pool — created once, reused for all enqueues
+_redis_pool = None
+
+
+async def get_redis_pool():
+    global _redis_pool
+    if _redis_pool is None:
+        _redis_pool = await create_pool(RedisSettings.from_dsn(settings.REDIS_URL))
+    return _redis_pool
 
 
 async def run_scan_job(ctx: dict, scan_id: str, project_id: str, repo_url: str | None = None):
@@ -22,9 +30,8 @@ async def run_scan_job(ctx: dict, scan_id: str, project_id: str, repo_url: str |
 
 async def enqueue_scan(scan_id: str, project_id: str, repo_url: str | None = None):
     """Enqueue a scan job to Redis. Called from API route."""
-    redis = await create_pool(RedisSettings.from_dsn(settings.REDIS_URL))
+    redis = await get_redis_pool()
     await redis.enqueue_job("run_scan_job", scan_id, project_id, repo_url)
-    await redis.close()
 
 
 class WorkerSettings:

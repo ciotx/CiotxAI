@@ -101,9 +101,20 @@ async def health_v1():
 
 
 # ── Exception Handler ────────────────────────
+import logging
+import traceback
+
+logger = logging.getLogger("ciotx")
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    logger.error(traceback.format_exc())
     return JSONResponse(
         status_code=500,
-        content={"error": "internal_server_error", "message": "An unexpected error occurred."},
+        content={
+            "error": "internal_server_error",
+            "message": "An unexpected error occurred.",
+            "detail": str(exc) if settings.DEV_MODE else None,
+        },
     )

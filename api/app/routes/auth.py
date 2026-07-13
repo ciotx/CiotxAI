@@ -9,7 +9,11 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
+
+limiter = Limiter(key_func=get_remote_address)
 
 from app.config import settings
 from app.database import get_db
@@ -70,7 +74,8 @@ def is_disposable_email(email: str) -> bool:
 # ── Signup ───────────────────────────────────
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_SIGNUP)
+async def signup(request: Request, body: SignupRequest, db: AsyncSession = Depends(get_db)):
     email = body.email.lower().strip()
 
     if is_disposable_email(email):
@@ -86,7 +91,7 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
             detail="An account with this email already exists.",
         )
 
-    trial_days = 7
+    trial_days = settings.TRIAL_DAYS
     user = User(
         email=email,
         password_hash=hash_password(body.password),
@@ -139,7 +144,8 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
 # ── Login ────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_AUTH)
+async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
     email = body.email.lower().strip()
 
     user = await get_user_by_email(db, email)
@@ -235,7 +241,8 @@ async def github_login():
         )
 
     state = secrets.token_urlsafe(32)
-    OAUTH_STATES[state] = datetime.now(timezone.utc).isoformat()
+    from app.services.state import oauth_states
+    await oauth_states.set(state, "pending")
     redirect_uri = f"{settings.API_BASE_URL}/v1/auth/github/callback"
 
     github_url = (
@@ -255,10 +262,11 @@ async def github_callback(code: str, state: str, db: AsyncSession = Depends(get_
     Handle GitHub OAuth callback. Exchange code for access token,
     fetch user info, create or link account.
     """
-    # Validate OAuth state to prevent CSRF
-    if state not in OAUTH_STATES:
+    # Validate OAuth state to prevent CSRF (Redis-backed, multi-worker safe)
+    from app.services.state import oauth_states
+    if not await oauth_states.exists(state):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state.")
-    del OAUTH_STATES[state]
+    await oauth_states.pop(state)
 
     if not settings.GITHUB_CLIENT_ID or not settings.GITHUB_CLIENT_SECRET:
         raise HTTPException(
@@ -347,7 +355,7 @@ async def github_callback(code: str, state: str, db: AsyncSession = Depends(get_
             await db.flush()
     else:
         # Create new user
-        trial_days = 7
+        trial_days = settings.TRIAL_DAYS
         user = User(
             email=github_email.lower(),
             name=github_name,

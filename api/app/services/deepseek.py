@@ -97,11 +97,15 @@ async def run_ai_review(
     if not settings.DEEPSEEK_API_KEY and not settings.OPENAI_API_KEY and not settings.ANTHROPIC_API_KEY:
         return []
 
-    api_key = settings.DEEPSEEK_API_KEY or settings.OPENAI_API_KEY or settings.ANTHROPIC_API_KEY
+    api_key = settings.DEEPSEEK_API_KEY or settings.OPENAI_API_KEY or settings.ANTHROPIC_API_KEY or settings.CUSTOM_API_KEY
     base_url = "https://api.deepseek.com/v1"
     model = "deepseek-v4-flash"
 
-    if settings.OPENAI_API_KEY and not settings.DEEPSEEK_API_KEY:
+    if settings.CUSTOM_API_KEY and settings.CUSTOM_BASE_URL:
+        api_key = settings.CUSTOM_API_KEY
+        base_url = settings.CUSTOM_BASE_URL
+        model = "default"
+    elif settings.OPENAI_API_KEY and not settings.DEEPSEEK_API_KEY and not settings.CUSTOM_API_KEY:
         base_url = "https://api.openai.com/v1"
         model = "gpt-4o"
     elif settings.ANTHROPIC_API_KEY and not settings.DEEPSEEK_API_KEY and not settings.OPENAI_API_KEY:

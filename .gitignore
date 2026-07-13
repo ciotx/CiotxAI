@@ -4,9 +4,10 @@
 .env.production
 
 # Planning & docs (not part of the codebase)
-architecture.md
-updates.md
+*.md
+!DEPLOY.md
 .claude/
+scripts/
 
 # Python
 __pycache__/
