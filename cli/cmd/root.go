@@ -187,8 +187,6 @@ func runLocalScan(cfg *config.Config, path string) error {
 	fmt.Println("  ═══════════════════════════════════")
 	fmt.Println()
 
-	// Import the engine package
-	enginePath := "github.com/ciotx/cli/internal/engine"
 	fmt.Printf("  Scanning: %s\n", path)
 
 	result, err := engine.RunLocalScan(path)
