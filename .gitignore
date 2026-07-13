@@ -1,0 +1,50 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Planning & docs (not part of the codebase)
+architecture.md
+updates.md
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+venv/
+*.egg
+
+# Go
+cli/ciotx
+cli/ciotx.exe
+*.exe
+
+# Node
+node_modules/
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+pgdata/
+redisdata/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temp
+tmp/
+temp/
