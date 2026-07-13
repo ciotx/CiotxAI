@@ -107,20 +107,20 @@ ufw allow from <YOUR_STATIC_IP> to any port 22 proto tcp
 
 ```bash
 cd /opt
-git clone https://github.com/CiotxAI/CiotxAI.git ciotx
+git clone https://github.com/ciotx/CiotxAI.git ciotx
 cd ciotx
 ```
 
 If the repo is private and you're not using SSH keys:
 
 ```bash
-git clone https://<TOKEN>@github.com/CiotxAI/CiotxAI.git ciotx
+git clone https://<TOKEN>@github.com/ciotx/CiotxAI.git ciotx
 ```
 
 Alternatively with SSH:
 
 ```bash
-git clone git@github.com:CiotxAI/CiotxAI.git ciotx
+git clone git@github.com:ciotx/CiotxAI.git ciotx
 ```
 
 ---

@@ -57,7 +57,7 @@ export default function LandingPage() {
         <div className="max-w-[1100px] mx-auto px-6 py-8 flex items-center justify-between text-xs text-text-tertiary">
           <span>&copy; 2026 CIOTX</span>
           <div className="flex gap-6">
-            <a href="https://github.com/CiotxAI/CiotxAI" className="hover:text-text-secondary transition-colors">GitHub</a>
+            <a href="https://github.com/ciotx/CiotxAI" className="hover:text-text-secondary transition-colors">GitHub</a>
           </div>
         </div>
       </footer>

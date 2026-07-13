@@ -86,7 +86,7 @@ export default function SettingsPage() {
             <p className="text-sm text-text-secondary mb-4">
               Use the CLI to authenticate and trigger scans. Run <code className="text-xs bg-bg-hover px-1.5 py-0.5 rounded font-mono">ciotx login</code> to get started.
             </p>
-            <a href="https://github.com/CiotxAI/CiotxAI" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/ciotx/CiotxAI" target="_blank" rel="noopener noreferrer"
                className="text-sm text-accent hover:underline inline-flex items-center gap-1">
               View on GitHub <ExternalLink className="w-3 h-3" />
             </a>
