@@ -1,7 +1,7 @@
 """CIOTX API — Vulnerability Routes"""
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func as sa_func, select
+from sqlalchemy import case, func as sa_func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -48,7 +48,7 @@ async def list_vulns(
     if status:
         query = query.where(Vulnerability.status == status.lower())
 
-    severity_order = sa_func.case(
+    severity_order = case(
         {"critical": 1, "high": 2, "medium": 3, "low": 4, "info": 5},
         value=Vulnerability.severity,
         else_=99,
