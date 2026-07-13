@@ -110,10 +110,6 @@ class Settings(BaseSettings):
                 errors.append("SECRET_KEY must be changed from default. Generate: openssl rand -hex 32")
             if self.INTERNAL_API_KEY == "change-me":
                 errors.append("INTERNAL_API_KEY must be changed from default.")
-            if not self.GITHUB_WEBHOOK_SECRET:
-                errors.append("GITHUB_WEBHOOK_SECRET is required in production.")
-            if not self.RAZORPAY_WEBHOOK_SECRET:
-                errors.append("RAZORPAY_WEBHOOK_SECRET is required in production.")
             if not (self.DEEPSEEK_API_KEY or self.OPENAI_API_KEY or self.ANTHROPIC_API_KEY or self.CUSTOM_API_KEY):
                 errors.append("At least one LLM API key is required (DEEPSEEK_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or CUSTOM_API_KEY).")
             if errors:

@@ -130,7 +130,7 @@ async def get_vuln(
         "status": vuln.status,
         "source_agent": vuln.source_agent,
         "confidence": vuln.confidence,
-        "metadata": vuln.metadata,
+        "extra_data": vuln.extra_data,
         "created_at": vuln.created_at.isoformat(),
     }
 
