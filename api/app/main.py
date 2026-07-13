@@ -41,13 +41,35 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # ── CORS ─────────────────────────────────────
+# Derive allowed origins from DASHBOARD_URL automatically.
+# Covers: configured domain (http + https), localhost dev, and direct port access.
+def _build_cors_origins() -> list[str]:
+    origins = set()
+    base = settings.DASHBOARD_URL.rstrip("/")
+    origins.add(base)
+    # Always allow both http and https variants of the configured domain
+    if base.startswith("https://"):
+        origins.add(base.replace("https://", "http://"))
+    elif base.startswith("http://"):
+        origins.add(base.replace("http://", "https://"))
+    # Strip port if present to also allow the bare domain
+    from urllib.parse import urlparse
+    parsed = urlparse(base)
+    bare = f"{parsed.scheme}://{parsed.hostname}"
+    origins.add(bare)
+    origins.add(bare.replace("https://", "http://"))
+    origins.add(bare.replace("http://", "https://"))
+    # Direct container/port access (for dev and initial setup)
+    origins.add(f"http://{parsed.hostname}:3000")
+    origins.add(f"https://{parsed.hostname}:3000")
+    # Always allow localhost for local dev
+    origins.add("http://localhost:3000")
+    origins.add("http://127.0.0.1:3000")
+    return list(origins)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.DASHBOARD_URL,
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=_build_cors_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Internal-Key"],

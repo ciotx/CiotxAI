@@ -6,13 +6,21 @@ import (
 	"path/filepath"
 )
 
+// DefaultAPIURL and DefaultDashboardURL are set at compile time via ldflags:
+//
+//	go build -ldflags="-X 'github.com/ciotx/cli/internal/config.DefaultAPIURL=https://api.example.com'"
+//
+// Fall back to localhost for local dev builds.
+var DefaultAPIURL = "http://localhost:8000"
+var DefaultDashboardURL = "http://localhost:3000"
+
 type Config struct {
-	APIURL        string `json:"api_url"`
-	DashboardURL  string `json:"dashboard_url"`
-	AccessToken   string `json:"access_token"`
-	RefreshToken  string `json:"refresh_token"`
-	UserID        string `json:"user_id,omitempty"`
-	UserEmail     string `json:"user_email,omitempty"`
+	APIURL       string `json:"api_url"`
+	DashboardURL string `json:"dashboard_url"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	UserID       string `json:"user_id,omitempty"`
+	UserEmail    string `json:"user_email,omitempty"`
 }
 
 func configPath() (string, error) {
@@ -33,14 +41,14 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	// Default URLs — can be overridden by env vars
+	// Priority: env var > compiled default > hardcoded fallback
 	defaultAPIURL := os.Getenv("CIOTX_API_URL")
 	if defaultAPIURL == "" {
-		defaultAPIURL = "http://localhost:8000"
+		defaultAPIURL = DefaultAPIURL
 	}
 	defaultDashboardURL := os.Getenv("CIOTX_DASHBOARD_URL")
 	if defaultDashboardURL == "" {
-		defaultDashboardURL = "http://localhost:3000"
+		defaultDashboardURL = DefaultDashboardURL
 	}
 
 	data, err := os.ReadFile(path)
