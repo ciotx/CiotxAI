@@ -34,11 +34,12 @@ async def get_db() -> AsyncSession:
 
 async def init_db():
     """Run Alembic migrations at startup. Falls back to create_all in dev."""
+    import asyncio
     try:
         from alembic.config import Config
         from alembic import command
         alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
+        await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
     except Exception:
         # Fallback for dev: create all tables directly
         async with engine.begin() as conn:
