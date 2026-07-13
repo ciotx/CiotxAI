@@ -9,8 +9,12 @@ server {
 
     client_max_body_size 20M;
 
+    # Use Docker DNS resolver to resolve hosts dynamically
+    resolver 127.0.0.11 valid=30s;
+
     location / {
-        proxy_pass         http://dashboard:3000;
+        set $upstream_dashboard http://dashboard:3000;
+        proxy_pass         $upstream_dashboard;
         proxy_http_version 1.1;
         proxy_set_header   Upgrade           $http_upgrade;
         proxy_set_header   Connection        'upgrade';
@@ -21,6 +25,19 @@ server {
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
     }
+
+    # One-liner Installer Script
+    location = /install {
+        alias /usr/share/nginx/html/install.sh;
+        default_type text/plain;
+    }
+
+    # Static Binaries Download
+    location /bin/ {
+        alias /usr/share/nginx/html/bin/;
+        autoindex on;
+        default_type application/octet-stream;
+    }
 }
 
 # API
@@ -30,8 +47,12 @@ server {
 
     client_max_body_size 50M;
 
+    # Use Docker DNS resolver to resolve hosts dynamically
+    resolver 127.0.0.11 valid=30s;
+
     location / {
-        proxy_pass         http://api:8000;
+        set $upstream_api http://api:8000;
+        proxy_pass         $upstream_api;
         proxy_http_version 1.1;
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;

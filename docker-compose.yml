@@ -108,6 +108,8 @@ services:
       DOMAIN_NAME: ${DOMAIN_NAME:-localhost}
     volumes:
       - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./bin:/usr/share/nginx/html/bin:ro
+      - ./nginx/install.sh:/usr/share/nginx/html/install.sh:ro
       # certbot SSL certificates (populated after running certbot on host)
       - /etc/letsencrypt:/etc/letsencrypt:ro
     ports:
