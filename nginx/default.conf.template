@@ -1,11 +1,23 @@
-## CIOTX — nginx reverse proxy
-## Auto-generated from DOMAIN_NAME at container start.
-## Do not edit directly — edit nginx/default.conf.template
+## CIOTX — nginx reverse proxy with SSL
+## Uses certificates mounted from /etc/letsencrypt/live/orsu.space/
 
-# Dashboard
+# Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+    server_name orsu.space www.orsu.space api.orsu.space;
+    return 301 https://$host$request_uri;
+}
+
+# Dashboard (HTTPS)
+server {
+    listen 443 ssl;
+    server_name orsu.space www.orsu.space;
+
+    ssl_certificate     /etc/letsencrypt/live/orsu.space/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/orsu.space/privkey.pem;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
 
     client_max_body_size 20M;
 
@@ -40,10 +52,16 @@ server {
     }
 }
 
-# API
+# API (HTTPS)
 server {
-    listen 80;
-    server_name api.${DOMAIN_NAME};
+    listen 443 ssl;
+    server_name api.orsu.space;
+
+    ssl_certificate     /etc/letsencrypt/live/orsu.space/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/orsu.space/privkey.pem;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
 
     client_max_body_size 50M;
 
