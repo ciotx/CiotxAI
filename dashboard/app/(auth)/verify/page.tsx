@@ -1,7 +1,7 @@
 "use client";
 
-import { verifyEmail } from "@/lib/api";
-import { Shield } from "lucide-react";
+import { api, verifyEmail } from "@/lib/api";
+import { Shield, Check } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
@@ -9,10 +9,71 @@ function VerifyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
+  const userCode = searchParams.get("code") || "";
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // PKCE CLI auth mode (when ?code= is present)
+  if (userCode) {
+    async function authorizeCLI() {
+      setLoading(true);
+      setError("");
+      const res = await api(`/v1/auth/cli/verify?user_code=${userCode}`, { method: "POST" });
+      if (res.ok) {
+        setLoading(false);
+        // Show success state — user can close this tab
+      } else {
+        const err = await res.json().catch(() => ({ detail: "Authorization failed." }));
+        setError(err.detail || "Authorization failed. Are you logged in?");
+        setLoading(false);
+      }
+    }
+
+    if (loading === false && error === "" && code === "done") {
+      return (
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="w-full max-w-sm text-center">
+            <div className="w-16 h-16 rounded-full bg-status-success/10 flex items-center justify-center mx-auto mb-6">
+              <Check className="w-8 h-8 text-status-success" />
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight mb-2">Authorized</h1>
+            <p className="text-text-secondary text-sm">You can close this tab and return to the CLI.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-16 h-16 rounded-full bg-bg-hover flex items-center justify-center mx-auto mb-6">
+            <Shield className="w-8 h-8 text-accent" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight mb-2">CIOTX CLI Authorization</h1>
+          <p className="text-text-secondary text-sm mb-8">
+            A CIOTX CLI instance is requesting authorization. Code: <span className="font-mono text-text-primary">{userCode}</span>
+          </p>
+
+          {error && (
+            <div className="bg-severity-critical/10 border border-severity-critical/30 text-severity-critical text-sm px-4 py-3 rounded-md mb-4">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={() => { authorizeCLI(); setCode("done"); }}
+            disabled={loading}
+            className="w-full bg-accent text-accent-text font-medium text-sm py-2.5 rounded-md hover:bg-accent-hover active:scale-[0.98] transition-all disabled:opacity-50"
+          >
+            {loading ? "Authorizing..." : "Authorize CLI"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Email verification mode (when ?email= is present)
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -41,7 +102,7 @@ function VerifyForm() {
         </h1>
         <p className="text-sm text-text-secondary text-center mb-8">
           We sent a 6-digit code to{" "}
-          <span className="text-text-primary">{email}</span>
+          <span className="text-text-primary">{email || "your email"}</span>
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

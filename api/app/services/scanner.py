@@ -276,6 +276,13 @@ async def run_scan(scan_id: str, project_id: str, repo_url: str | None, local_pa
             scan.high_count = severity_map["high"]
             scan.medium_count = severity_map["medium"]
             scan.low_count = severity_map["low"]
+            # Aggregate cost from agent logs
+            from sqlalchemy import select as sa_select, func as sa_func
+            cost_result = await db.execute(
+                sa_select(sa_func.sum(ScanAgentLog.llm_cost_cents)).where(ScanAgentLog.scan_id == scan_id)
+            )
+            total_cost = cost_result.scalar() or 0
+            scan.total_cost_cents = total_cost
             scan.status = "completed"
             scan.completed_at = datetime.now(timezone.utc)
             await db.flush()

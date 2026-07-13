@@ -59,6 +59,11 @@ async def trigger_scan(
                     detail=f"Scan limit reached ({sub.scans_used}/{scans_limit}). Upgrade to Pro for unlimited scans.",
                 )
         elif user.plan_status == "trial":
+            # Check trial hasn't expired
+            if user.trial_ends_at and datetime.now(timezone.utc) > user.trial_ends_at:
+                user.plan_status = "expired"
+                await db.flush()
+                raise HTTPException(status_code=402, detail="Your trial has expired. Subscribe to continue scanning.")
             # Count scans during trial (exclude failed scans)
             count_result = await db.execute(
                 select(sa_func.count(Scan.id)).where(
@@ -123,7 +128,6 @@ async def submit_local_scan(request: Request, db: AsyncSession = Depends(get_db)
             scans_limit = settings.STARTER_SCAN_LIMIT if sub.plan == "starter" else -1
             if scans_limit > 0 and sub.scans_used >= scans_limit:
                 raise HTTPException(status_code=402, detail=f"Scan limit reached ({sub.scans_used}/{scans_limit}). Upgrade to Pro.")
-            sub.scans_used += 1
             scan_count = sub.scans_used
         elif user.plan_status == "trial":
             count_result = await db.execute(
@@ -133,8 +137,8 @@ async def submit_local_scan(request: Request, db: AsyncSession = Depends(get_db)
                 )
             )
             scan_count = count_result.scalar() or 0
-            if scan_count >= 10:
-                raise HTTPException(status_code=402, detail="Trial limit reached (10 scans). Subscribe to continue.")
+            if scan_count >= settings.TRIAL_SCAN_LIMIT:
+                raise HTTPException(status_code=402, detail=f"Trial limit reached ({scan_count}/{settings.TRIAL_SCAN_LIMIT} scans). Subscribe to continue.")
         else:
             raise HTTPException(status_code=402, detail="No active plan. Subscribe to start scanning.")
 
@@ -201,6 +205,11 @@ async def submit_local_scan(request: Request, db: AsyncSession = Depends(get_db)
     scan.medium_count = severity_map["medium"]
     scan.low_count = severity_map["low"]
     await db.flush()
+
+    # Increment usage AFTER all persistence succeeds
+    if sub:
+        sub.scans_used += 1
+        await db.flush()
 
     return {
         "scan_id": scan.id,

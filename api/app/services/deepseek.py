@@ -130,7 +130,7 @@ async def run_ai_review(
     await db.flush()
 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=float(settings.LLM_TIMEOUT_SEC)) as client:
             resp = await client.post(
                 f"{base_url}/chat/completions",
                 headers={
@@ -143,8 +143,8 @@ async def run_ai_review(
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": context},
                     ],
-                    "temperature": 0.1,
-                    "max_tokens": 4096,
+                    "temperature": settings.LLM_TEMPERATURE,
+                    "max_tokens": settings.LLM_MAX_TOKENS,
                     "response_format": {"type": "json_object"},
                 },
             )

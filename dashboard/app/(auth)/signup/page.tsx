@@ -23,7 +23,7 @@ export default function SignupPage() {
     setLoading(false);
 
     if (result.success) {
-      router.push(`/verify?email=${encodeURIComponent(email)}`);
+      router.push("/login?created=true");
     } else {
       setError(result.error || "Signup failed.");
     }

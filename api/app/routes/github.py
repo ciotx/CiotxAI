@@ -49,9 +49,10 @@ async def github_connect():
             detail="GitHub OAuth is not configured.",
         )
 
+    user = await get_current_user(request, db)
     state = secrets.token_urlsafe(32)
     from app.services.state import gh_oauth_states
-    await gh_oauth_states.set(state, "pending")
+    await gh_oauth_states.set(state, user.id)  # Store user_id so callback doesn't need JWT
     redirect_uri = f"{settings.API_BASE_URL}/v1/github/callback"
 
     url = (
@@ -73,13 +74,15 @@ async def github_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle GitHub OAuth callback for repo access. Stores encrypted token."""
-    # Validate OAuth state to prevent CSRF (Redis-backed, multi-worker safe)
+    # Validate OAuth state and retrieve user_id (no JWT needed — browser redirect from GitHub)
     from app.services.state import gh_oauth_states
-    if not await gh_oauth_states.exists(state):
+    user_id = await gh_oauth_states.pop(state)
+    if not user_id:
         raise HTTPException(status_code=400, detail="Invalid OAuth state.")
-    await gh_oauth_states.pop(state)
 
-    user = await get_current_user(request, db)
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
 
     if not settings.GITHUB_CLIENT_ID or not settings.GITHUB_CLIENT_SECRET:
         raise HTTPException(
@@ -181,10 +184,16 @@ async def list_repos(
     if token_enc.startswith("DEV:"):
         access_token = base64.b64decode(token_enc[4:]).decode()
     elif token_enc.startswith("AES:"):
-        from cryptography.fernet import Fernet
-        key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
-        f = Fernet(key)
-        access_token = f.decrypt(token_enc[4:].encode()).decode()
+        try:
+            from cryptography.fernet import Fernet
+            key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
+            f = Fernet(key)
+            access_token = f.decrypt(token_enc[4:].encode()).decode()
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub connection expired. Please reconnect in Settings.",
+            )
     else:
         # Legacy: plain base64 (upgrade on next connect)
         access_token = base64.b64decode(token_enc).decode()

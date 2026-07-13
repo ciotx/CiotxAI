@@ -2,7 +2,7 @@
 
 import Sidebar from "@/components/Sidebar";
 import { api, getMe } from "@/lib/api";
-import { Plus, Scan, ExternalLink, Trash2 } from "lucide-react";
+import { GitBranch, Plus, Scan, ExternalLink, Trash2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -21,6 +21,13 @@ interface Project {
   last_scan_at: string | null; created_at: string;
 }
 
+interface GitHubRepo {
+  id: number; name: string; full_name: string;
+  description: string | null; private: boolean;
+  html_url: string; default_branch: string;
+  language: string | null; updated_at: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -29,6 +36,10 @@ export default function DashboardPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [showRepoSelector, setShowRepoSelector] = useState(false);
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [repoError, setRepoError] = useState("");
 
   const fetchProjects = useCallback(async () => {
     const res = await api("/v1/projects");
@@ -66,6 +77,40 @@ export default function DashboardPage() {
     fetchProjects();
   }
 
+  async function openRepoSelector() {
+    setShowRepoSelector(true);
+    setLoadingRepos(true);
+    setRepoError("");
+
+    const res = await api("/v1/github/repos");
+    if (res.ok) {
+      const data = await res.json();
+      setRepos(data.repos || []);
+    } else {
+      const err = await res.json().catch(() => ({ detail: "Failed to load repos" }));
+      setRepoError(err.detail || "GitHub not connected. Connect in Settings first.");
+      setRepos([]);
+    }
+    setLoadingRepos(false);
+  }
+
+  async function connectRepo(repo: GitHubRepo) {
+    const res = await api("/v1/projects", {
+      method: "POST",
+      body: JSON.stringify({
+        name: repo.name,
+        repo_url: repo.html_url,
+        repo_provider: "github",
+        github_repo_id: repo.id,
+      }),
+    });
+    if (res.ok) {
+      setShowRepoSelector(false);
+      setRepos([]);
+      fetchProjects();
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -76,8 +121,6 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  const isTrial = user.plan_status === "trial";
-
   return (
     <div className="flex">
       <Sidebar user={user} />
@@ -87,15 +130,75 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-semibold tracking-tight mb-1">Projects</h1>
             <p className="text-text-secondary text-sm">{projects.length} project{projects.length !== 1 ? "s" : ""}</p>
           </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 bg-accent text-accent-text font-medium text-sm px-4 py-2.5 rounded-md hover:bg-accent-hover active:scale-[0.98] transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            New Project
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={openRepoSelector}
+              className="flex items-center gap-2 bg-bg-hover text-text-primary font-medium text-sm px-4 py-2.5 rounded-md border border-border-subtle hover:border-border-default transition-colors"
+            >
+              <GitBranch className="w-4 h-4" />
+              Connect Repository
+            </button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 bg-accent text-accent-text font-medium text-sm px-4 py-2.5 rounded-md hover:bg-accent-hover active:scale-[0.98] transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              New Project
+            </button>
+          </div>
         </div>
 
+        {/* Repo Selector Modal */}
+        {showRepoSelector && (
+          <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Import from GitHub</h3>
+              <button onClick={() => setShowRepoSelector(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Cancel</button>
+            </div>
+
+            {loadingRepos ? (
+              <div className="text-text-secondary text-sm py-8 text-center">Loading repositories...</div>
+            ) : repoError ? (
+              <div className="text-center py-8">
+                <p className="text-text-secondary text-sm mb-4">{repoError}</p>
+                <a href="/settings" className="text-sm text-accent hover:underline">Go to Settings → Connect GitHub</a>
+              </div>
+            ) : repos.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-text-secondary text-sm mb-4">No repositories found.</p>
+                <a href="/settings" className="text-sm text-accent hover:underline">Check your GitHub connection in Settings</a>
+              </div>
+            ) : (
+              <div className="space-y-1 max-h-80 overflow-y-auto">
+                {repos.map((repo) => (
+                  <button
+                    key={repo.id}
+                    onClick={() => connectRepo(repo)}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-bg-hover transition-colors text-left"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{repo.full_name}</span>
+                        {repo.private && (
+                          <span className="text-xs text-text-tertiary border border-border-subtle rounded px-1">private</span>
+                        )}
+                      </div>
+                      {repo.description && (
+                        <p className="text-xs text-text-tertiary truncate mt-0.5">{repo.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-text-tertiary flex-shrink-0 ml-4">
+                      {repo.language && <span>{repo.language}</span>}
+                      <span>→</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Manual Create Form */}
         {showCreate && (
           <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 mb-8">
             <form onSubmit={createProject} className="space-y-4 max-w-md">
@@ -129,7 +232,7 @@ export default function DashboardPage() {
             </div>
             <h2 className="text-lg font-semibold mb-2">No projects yet</h2>
             <p className="text-text-secondary text-sm max-w-md">
-              Create a project to start scanning. Connect a GitHub repo or scan a local directory from the CLI.
+              Connect a GitHub repository or create a manual project to start scanning.
             </p>
           </div>
         ) : (

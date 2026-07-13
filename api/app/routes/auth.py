@@ -105,18 +105,11 @@ async def signup(request: Request, body: SignupRequest, db: AsyncSession = Depen
     await db.flush()
 
     code = generate_verification_code(email)
-    if settings.DEV_MODE:
-        # Auto-verify in dev mode
-        user.email_verified = True
-        await db.flush()
-        return {"message": "Account created (dev mode — auto-verified).", "user_id": user.id}
-
-    # In production, send email with verification code
-    # TODO: integrate email service (Resend/SES)
-    return {
-        "message": "Account created. Check your email for a 6-digit verification code.",
-        "user_id": user.id,
-    }
+    # Auto-verify until email service (Resend/SES) is integrated
+    # TODO: when email is wired up, remove auto-verify and send real email
+    user.email_verified = True
+    await db.flush()
+    return {"message": "Account created.", "user_id": user.id, "email_verified": True}
 
 
 # ── Email Verification ───────────────────────
