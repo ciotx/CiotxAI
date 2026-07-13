@@ -41,6 +41,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://ciotx:${DB_PASSWORD}@postgres:5432/ciotx
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       SECRET_KEY: ${SECRET_KEY}
+      DOMAIN_NAME: ${DOMAIN_NAME:-}
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
       DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:3000}
       DEV_MODE: ${DEV_MODE:-true}
@@ -118,6 +119,7 @@ services:
       dockerfile: Dockerfile
     container_name: ciotx-dashboard
     environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:-}
       NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:8000}
       NODE_ENV: ${NODE_ENV:-development}
     depends_on:

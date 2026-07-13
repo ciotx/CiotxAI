@@ -7,14 +7,32 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    # ── Domain ───────────────────────────────
+    # Set ONE variable to auto-derive all URLs.
+    # Example: DOMAIN_NAME=ciotx.com → dashboard=https://ciotx.com, api=https://api.ciotx.com
+    # Leave empty for localhost dev.
+    DOMAIN_NAME: str = ""
+
     # ── Application ──────────────────────────
     APP_NAME: str = "CIOTX"
     APP_VERSION: str = "0.1.0"
-    API_BASE_URL: str = "http://localhost:8000"
-    DASHBOARD_URL: str = "http://localhost:3000"
     DEV_MODE: bool = True
     DEV_AUTO_PLAN: str = "pro"
     LOG_LEVEL: str = "INFO"
+
+    # ── URLs (auto-derived from DOMAIN_NAME if set, otherwise use explicit values) ──
+    API_BASE_URL: str = "http://localhost:8000"
+    DASHBOARD_URL: str = "http://localhost:3000"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # If DOMAIN_NAME is set, override URLs
+        if self.DOMAIN_NAME:
+            self.DASHBOARD_URL = f"https://{self.DOMAIN_NAME}"
+            self.API_BASE_URL = f"https://api.{self.DOMAIN_NAME}"
+        elif self.DEV_MODE:
+            self.DASHBOARD_URL = self.DASHBOARD_URL or "http://localhost:3000"
+            self.API_BASE_URL = self.API_BASE_URL or "http://localhost:8000"
 
     # ── Database ──────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://ciotx:ciotx@postgres:5432/ciotx"
