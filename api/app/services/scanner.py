@@ -5,6 +5,7 @@ Phase 2: AI-First Review (DeepSeek reads every line)
 Phase 3: Triage (dedup, score, store)
 """
 
+import json
 import os
 import subprocess
 import tempfile
@@ -107,7 +108,6 @@ def run_semgrep(scan_root: str) -> list[dict]:
         )
         if result.returncode not in (0, 1):
             return []
-        import json
         data = json.loads(result.stdout)
         findings = []
         for r in data.get("results", []):
@@ -142,7 +142,6 @@ def run_gitleaks(scan_root: str) -> list[dict]:
         )
         if result.returncode not in (0, 1):
             return []
-        import json
         data = json.loads(result.stdout) if result.stdout.strip() else []
         findings = []
         for r in data if isinstance(data, list) else []:
