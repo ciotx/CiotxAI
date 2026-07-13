@@ -49,8 +49,11 @@ async def list_vulns(
         query = query.where(Vulnerability.status == status.lower())
 
     severity_order = case(
-        {"critical": 1, "high": 2, "medium": 3, "low": 4, "info": 5},
-        value=Vulnerability.severity,
+        (Vulnerability.severity == "critical", 1),
+        (Vulnerability.severity == "high", 2),
+        (Vulnerability.severity == "medium", 3),
+        (Vulnerability.severity == "low", 4),
+        (Vulnerability.severity == "info", 5),
         else_=99,
     )
     query = query.order_by(
