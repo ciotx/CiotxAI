@@ -6,10 +6,6 @@ server {
     listen 80;
     server_name orsu.space www.orsu.space api.orsu.space;
 
-    if ($http_x_forwarded_proto != "https") {
-        return 301 https://$host$request_uri;
-    }
-
     # If already HTTPS behind proxy, serve dashboard directly
     location / {
         proxy_pass         http://dashboard:3000;
