@@ -50,16 +50,55 @@ If no vulnerabilities are found, return: {"findings": []}
 
 
 def build_context(files: dict[str, str], project_info: str) -> str:
-    """Build the prompt context with files and project information."""
+    """Build the prompt context with files and project information, respecting a size budget."""
+    MAX_CONTEXT_CHARS = 2_000_000
+    
+    # Define file extension priority categories
+    CRITICAL_EXTS = {
+        ".py", ".js", ".ts", ".tsx", ".jsx", ".go", ".java", ".cs", 
+        ".cpp", ".c", ".h", ".php", ".rb", ".rs", ".swift", ".kt", 
+        ".vue", ".svelte"
+    }
+    
+    # Sort files: Critical source files first, then config files, then others
+    def get_priority(path: str) -> int:
+        ext = os.path.splitext(path.lower())[1]
+        name = os.path.basename(path.lower())
+        if ext in CRITICAL_EXTS:
+            return 1
+        if name in ("dockerfile", "package.json", "requirements.txt", "go.mod"):
+            return 2
+        return 3
+
+    sorted_files = sorted(files.items(), key=lambda item: get_priority(item[0]))
+
     context_parts = [f"PROJECT CONTEXT:\n{project_info}\n\nFILES TO ANALYZE:\n"]
-    for path, content in files.items():
-        # Truncate very large files to 500 lines
+    current_length = len(context_parts[0])
+    omitted_files = []
+
+    for path, content in sorted_files:
+        # Truncate very large files to 500 lines to save space
         lines = content.split("\n")
         if len(lines) > 500:
-            display = "\n".join(lines[:500])
-            context_parts.append(f"--- {path} (truncated to 500 lines) ---\n{display}\n")
+            display_content = "\n".join(lines[:500])
+            file_block = f"--- {path} (truncated to 500 lines) ---\n{display_content}\n"
         else:
-            context_parts.append(f"--- {path} ---\n{content}\n")
+            file_block = f"--- {path} ---\n{content}\n"
+
+        # Check if adding this file exceeds the budget
+        if current_length + len(file_block) < MAX_CONTEXT_CHARS:
+            context_parts.append(file_block)
+            current_length += len(file_block)
+        else:
+            omitted_files.append(path)
+
+    if omitted_files:
+        warning_msg = f"\n\nWARNING: The following {len(omitted_files)} files were omitted to respect the LLM context limit:\n"
+        warning_msg += "\n".join(f"- {p}" for p in omitted_files[:20])
+        if len(omitted_files) > 20:
+            warning_msg += f"\n... and {len(omitted_files) - 20} more files."
+        context_parts.append(warning_msg)
+
     return "\n".join(context_parts)
 
 
