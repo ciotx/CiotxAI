@@ -30,7 +30,7 @@ async def list_vulns(
     project_id: str,
     request: Request,
     severity: str | None = None,
-    status: str | None = None,
+    status_filter: str | None = None,
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
@@ -45,8 +45,8 @@ async def list_vulns(
     query = select(Vulnerability).where(Vulnerability.project_id == project_id)
     if severity:
         query = query.where(Vulnerability.severity == severity.lower())
-    if status:
-        query = query.where(Vulnerability.status == status.lower())
+    if status_filter:
+        query = query.where(Vulnerability.status == status_filter.lower())
 
     severity_order = case(
         (Vulnerability.severity == "critical", 1),
@@ -68,8 +68,8 @@ async def list_vulns(
     count_query = select(sa_func.count(Vulnerability.id)).where(Vulnerability.project_id == project_id)
     if severity:
         count_query = count_query.where(Vulnerability.severity == severity.lower())
-    if status:
-        count_query = count_query.where(Vulnerability.status == status.lower())
+    if status_filter:
+        count_query = count_query.where(Vulnerability.status == status_filter.lower())
     count_result = await db.execute(count_query)
     total = count_result.scalar() or 0
 

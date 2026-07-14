@@ -41,7 +41,7 @@ GH_OAUTH_STATES: dict[str, str] = {}
 
 
 @router.get("/github/connect")
-async def github_connect():
+async def github_connect(request: Request, db: AsyncSession = Depends(get_db)):
     """Start GitHub OAuth flow for repo access."""
     if not settings.GITHUB_CLIENT_ID:
         raise HTTPException(
@@ -152,7 +152,11 @@ async def github_callback(
 
     await db.flush()
 
-    return {"message": "GitHub connected successfully.", "github_username": github_username}
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(
+        url=f"{settings.DASHBOARD_URL}/settings?github_connected=1",
+        status_code=302,
+    )
 
 
 # ── Repo Listing ─────────────────────────────

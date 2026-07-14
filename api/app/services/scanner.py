@@ -40,6 +40,7 @@ SOURCE_EXTENSIONS = {
 
 def discover_files(root: str) -> dict[str, str]:
     """Walk a directory and return {relative_path: content} for all source files."""
+    from app.config import settings
     files = {}
     root_path = Path(root)
     for path in root_path.rglob("*"):
@@ -52,6 +53,12 @@ def discover_files(root: str) -> dict[str, str]:
         if path.suffix.lower() in SKIP_EXTENSIONS:
             continue
         if path.suffix.lower() not in SOURCE_EXTENSIONS and path.name.lower() not in ("dockerfile", "makefile"):
+            continue
+        # Skip files that exceed the configured size limit
+        try:
+            if path.stat().st_size > settings.SCAN_MAX_FILE_SIZE:
+                continue
+        except OSError:
             continue
         try:
             content = path.read_text(encoding="utf-8", errors="replace")

@@ -118,7 +118,8 @@ async def signup(request: Request, body: SignupRequest, db: AsyncSession = Depen
 async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
     email = body.email.lower().strip()
 
-    if not verify_email_code(email, body.code):
+    from app.services.state import verify_email_code_async
+    if not await verify_email_code_async(email, body.code):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification code.",

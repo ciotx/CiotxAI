@@ -24,16 +24,6 @@ class Settings(BaseSettings):
     API_BASE_URL: str = "http://localhost:8000"
     DASHBOARD_URL: str = "http://localhost:3000"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # If DOMAIN_NAME is set, override URLs
-        if self.DOMAIN_NAME:
-            self.DASHBOARD_URL = f"https://{self.DOMAIN_NAME}"
-            self.API_BASE_URL = f"https://api.{self.DOMAIN_NAME}"
-        elif self.DEV_MODE:
-            self.DASHBOARD_URL = self.DASHBOARD_URL or "http://localhost:3000"
-            self.API_BASE_URL = self.API_BASE_URL or "http://localhost:8000"
-
     # ── Database ──────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://ciotx:ciotx@postgres:5432/ciotx"
     DB_PASSWORD: str = ""
@@ -104,6 +94,15 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # Derive URLs from DOMAIN_NAME if set — must happen before production validation
+        if self.DOMAIN_NAME:
+            self.DASHBOARD_URL = f"https://{self.DOMAIN_NAME}"
+            self.API_BASE_URL = f"https://api.{self.DOMAIN_NAME}"
+        elif self.DEV_MODE:
+            self.DASHBOARD_URL = self.DASHBOARD_URL or "http://localhost:3000"
+            self.API_BASE_URL = self.API_BASE_URL or "http://localhost:8000"
+
+        # Production safety checks
         if not self.DEV_MODE:
             errors = []
             if self.SECRET_KEY == "change-me-in-production":

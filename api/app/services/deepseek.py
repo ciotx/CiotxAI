@@ -99,7 +99,7 @@ async def run_ai_review(
 
     api_key = settings.DEEPSEEK_API_KEY or settings.OPENAI_API_KEY or settings.ANTHROPIC_API_KEY or settings.CUSTOM_API_KEY
     base_url = "https://api.deepseek.com/v1"
-    model = "deepseek-v4-flash"
+    model = "deepseek-chat"  # DeepSeek V3 — current production model
 
     if settings.CUSTOM_API_KEY and settings.CUSTOM_BASE_URL:
         api_key = settings.CUSTOM_API_KEY

@@ -30,21 +30,29 @@ export default function VulnListPage() {
   const [loading, setLoading] = useState(true);
   const [sevFilter, setSevFilter] = useState("");
 
+  const [offset, setOffset] = useState(0);
+  const LIMIT = 100;
+
   useEffect(() => {
     getMe().then((u) => {
       if (!u) { router.push("/login"); return; }
-      fetchVulns();
+      fetchVulns(0);
     });
   }, [projectId, router, sevFilter]);
 
-  async function fetchVulns() {
+  async function fetchVulns(newOffset: number) {
     setLoading(true);
-    const url = `/v1/projects/${projectId}/vulns?limit=100${sevFilter ? `&severity=${sevFilter}` : ""}`;
+    const url = `/v1/projects/${projectId}/vulns?limit=${LIMIT}&offset=${newOffset}${sevFilter ? `&severity=${sevFilter}` : ""}`;
     const res = await api(url);
     if (res.ok) {
       const data = await res.json();
-      setVulns(data.vulns || []);
+      if (newOffset === 0) {
+        setVulns(data.vulns || []);
+      } else {
+        setVulns((prev) => [...prev, ...(data.vulns || [])]);
+      }
       setTotal(data.total || 0);
+      setOffset(newOffset);
     }
     setLoading(false);
   }
@@ -115,6 +123,15 @@ export default function VulnListPage() {
                 </Link>
               );
             })}
+            {vulns.length < total && (
+              <button
+                onClick={() => fetchVulns(offset + LIMIT)}
+                disabled={loading}
+                className="w-full py-3 text-sm text-text-secondary hover:text-text-primary border border-border-subtle rounded-lg hover:border-border-default transition-colors disabled:opacity-50"
+              >
+                {loading ? "Loading..." : `Load more (${vulns.length} of ${total})`}
+              </button>
+            )}
           </div>
         )}
       </main>
