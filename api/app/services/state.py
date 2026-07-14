@@ -25,7 +25,7 @@ class StateStore:
     async def _get_redis(self):
         if self._redis is None:
             try:
-                self._redis = await aioredis.from_url(settings.REDIS_URL)
+                self._redis = aioredis.from_url(settings.REDIS_URL)
             except Exception:
                 self._redis = False  # Mark as unavailable
         return self._redis if self._redis is not False else None
