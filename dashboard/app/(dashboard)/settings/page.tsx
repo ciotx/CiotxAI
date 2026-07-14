@@ -23,16 +23,26 @@ export default function SettingsPage() {
 
   async function connectGitHub() {
     setConnectingGitHub(true);
-    const res = await api("/v1/github/connect");
-    if (res.ok) {
-      const data = await res.json();
-      window.open(data.url, "_blank");
-      setGhStatus("Complete the authorization in the new tab, then refresh this page.");
-    } else {
-      const err = await res.json();
-      setGhStatus(err.detail || "GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env");
+    setGhStatus("");
+    try {
+      const res = await api("/v1/github/connect");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.open(data.url, "_blank");
+          setGhStatus("Complete the authorization in the new tab, then refresh this page.");
+        } else {
+          setGhStatus("Failed to get authorization URL from server.");
+        }
+      } else {
+        const err = await res.json().catch(() => ({ detail: null }));
+        setGhStatus(err.detail || "GitHub OAuth not configured or failed. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env");
+      }
+    } catch (e: any) {
+      setGhStatus("Network error occurred while connecting to GitHub.");
+    } finally {
+      setConnectingGitHub(false);
     }
-    setConnectingGitHub(false);
   }
 
   if (loading) return <div className="flex h-screen"><Sidebar user={null} /><div className="flex-1 flex items-center justify-center text-text-secondary text-sm">Loading...</div></div>;
